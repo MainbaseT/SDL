@@ -2109,13 +2109,6 @@ void SDL_ToggleDragAndDropSupport(void)
     }
 }
 
-void SDL_UpdateRawMouseDataEnabled(void)
-{
-    if (_this && _this->RefreshRawInput) {
-        _this->RefreshRawInput(_this);
-    }
-}
-
 SDL_Window **SDLCALL SDL_GetWindows(int *count)
 {
     if (count) {
@@ -4012,9 +4005,6 @@ void SDL_OnWindowFocusGained(SDL_Window *window)
 
     if (mouse && mouse->relative_mode) {
         SDL_SetMouseFocus(window);
-        if (mouse->relative_mode_warp) {
-            SDL_PerformWarpMouseInWindow(window, (float)window->w / 2.0f, (float)window->h / 2.0f, true);
-        }
     }
 
     SDL_UpdateWindowGrab(window);

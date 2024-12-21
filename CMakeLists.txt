@@ -2766,10 +2766,6 @@ elseif(PSP)
   )
 
 elseif(PS2)
-  sdl_compile_definitions(PRIVATE "PS2" "__PS2__")
-  sdl_include_directories(PRIVATE SYSTEM "$ENV{PS2SDK}/ports/include" "$ENV{PS2DEV}/gsKit/include")
-  target_include_directories(SDL_uclibc PRIVATE "$ENV{PS2SDK}/ports/include" "$ENV{PS2DEV}/gsKit/include")
-
   sdl_glob_sources("${SDL3_SOURCE_DIR}/src/main/ps2/*.c")
 
   if(SDL_AUDIO)

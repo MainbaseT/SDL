@@ -2007,15 +2007,15 @@ static D3D12StagingDescriptorPool *D3D12_INTERNAL_CreateStagingDescriptorPool(
         return NULL;
     }
 
-    D3D12StagingDescriptorPool *pool = SDL_calloc(1, sizeof(D3D12StagingDescriptorPool));
+    D3D12StagingDescriptorPool *pool = (D3D12StagingDescriptorPool*) SDL_calloc(1, sizeof(D3D12StagingDescriptorPool));
 
     pool->heapCount = 1;
-    pool->heaps = SDL_malloc(sizeof(D3D12DescriptorHeap*));
+    pool->heaps = (D3D12DescriptorHeap**) SDL_malloc(sizeof(D3D12DescriptorHeap*));
     pool->heaps[0] = heap;
 
     pool->freeDescriptorCapacity = STAGING_HEAP_DESCRIPTOR_COUNT;
     pool->freeDescriptorCount = STAGING_HEAP_DESCRIPTOR_COUNT;
-    pool->freeDescriptors = SDL_malloc(STAGING_HEAP_DESCRIPTOR_COUNT * sizeof(D3D12StagingDescriptor));
+    pool->freeDescriptors = (D3D12StagingDescriptor*) SDL_malloc(STAGING_HEAP_DESCRIPTOR_COUNT * sizeof(D3D12StagingDescriptor));
 
     for (Uint32 i = 0; i < STAGING_HEAP_DESCRIPTOR_COUNT; i += 1) {
         pool->freeDescriptors[i].pool = pool;
@@ -2045,12 +2045,12 @@ static bool D3D12_INTERNAL_ExpandStagingDescriptorPool(
     }
 
     pool->heapCount += 1;
-    pool->heaps = SDL_realloc(pool->heaps, pool->heapCount * sizeof(D3D12DescriptorHeap*));
+    pool->heaps = (D3D12DescriptorHeap**) SDL_realloc(pool->heaps, pool->heapCount * sizeof(D3D12DescriptorHeap*));
     pool->heaps[pool->heapCount - 1] = heap;
 
     pool->freeDescriptorCapacity += STAGING_HEAP_DESCRIPTOR_COUNT;
     pool->freeDescriptorCount += STAGING_HEAP_DESCRIPTOR_COUNT;
-    pool->freeDescriptors = SDL_realloc(pool->freeDescriptors, pool->freeDescriptorCapacity * sizeof(D3D12StagingDescriptor));
+    pool->freeDescriptors = (D3D12StagingDescriptor*) SDL_realloc(pool->freeDescriptors, pool->freeDescriptorCapacity * sizeof(D3D12StagingDescriptor));
 
     for (Uint32 i = 0; i < STAGING_HEAP_DESCRIPTOR_COUNT; i += 1) {
         pool->freeDescriptors[i].pool = pool;
@@ -6374,6 +6374,9 @@ static bool D3D12_INTERNAL_CreateSwapchain(
     SDL_SyncWindow(windowData->window);
     SDL_GetWindowSizeInPixels(windowData->window, &width, &height);
 
+    // Min swapchain image count is 2
+    windowData->swapchainTextureCount = SDL_clamp(renderer->allowedFramesInFlight, 2, 3);
+
     // Create the swapchain textures
     SDL_zero(createInfo);
     createInfo.type = SDL_GPU_TEXTURETYPE_2D;
@@ -8691,26 +8694,6 @@ static SDL_GPUDevice *D3D12_CreateDevice(bool debugMode, bool preferLowPower, SD
             CHECK_D3D12_ERROR_AND_RETURN("Could not create D3D12Device", NULL);
         }
 
-        res = renderer->device->SetFrameIntervalX(
-            NULL,
-            D3D12XBOX_FRAME_INTERVAL_60_HZ,
-            renderer->allowedFramesInFlight - 1,
-            D3D12XBOX_FRAME_INTERVAL_FLAG_NONE);
-        if (FAILED(res)) {
-            D3D12_INTERNAL_DestroyRenderer(renderer);
-            CHECK_D3D12_ERROR_AND_RETURN("Could not get set frame interval", NULL);
-        }
-
-        res = renderer->device->ScheduleFrameEventX(
-            D3D12XBOX_FRAME_EVENT_ORIGIN,
-            0,
-            NULL,
-            D3D12XBOX_SCHEDULE_FRAME_EVENT_FLAG_NONE);
-        if (FAILED(res)) {
-            D3D12_INTERNAL_DestroyRenderer(renderer);
-            CHECK_D3D12_ERROR_AND_RETURN("Could not schedule frame events", NULL);
-        }
-
         s_Device = renderer->device;
     }
 #else
@@ -8979,6 +8962,28 @@ static SDL_GPUDevice *D3D12_CreateDevice(bool debugMode, bool preferLowPower, SD
 
     // Blit resources
     D3D12_INTERNAL_InitBlitResources(renderer);
+
+#if (defined(SDL_PLATFORM_XBOXONE) || defined(SDL_PLATFORM_XBOXSERIES))
+    res = renderer->device->SetFrameIntervalX(
+        NULL,
+        D3D12XBOX_FRAME_INTERVAL_60_HZ,
+        renderer->allowedFramesInFlight - 1,
+        D3D12XBOX_FRAME_INTERVAL_FLAG_NONE);
+    if (FAILED(res)) {
+        D3D12_INTERNAL_DestroyRenderer(renderer);
+        CHECK_D3D12_ERROR_AND_RETURN("Could not get set frame interval", NULL);
+    }
+
+    res = renderer->device->ScheduleFrameEventX(
+        D3D12XBOX_FRAME_EVENT_ORIGIN,
+        0,
+        NULL,
+        D3D12XBOX_SCHEDULE_FRAME_EVENT_FLAG_NONE);
+    if (FAILED(res)) {
+        D3D12_INTERNAL_DestroyRenderer(renderer);
+        CHECK_D3D12_ERROR_AND_RETURN("Could not schedule frame events", NULL);
+    }
+#endif
 
     // Create the SDL_GPU Device
     result = (SDL_GPUDevice *)SDL_calloc(1, sizeof(SDL_GPUDevice));

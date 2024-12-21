@@ -390,7 +390,6 @@ static void SDL_LogEvent(const SDL_Event *event)
     // sensor/mouse/pen/finger motion are spammy, ignore these if they aren't demanded.
     if ((SDL_EventLoggingVerbosity < 2) &&
         ((event->type == SDL_EVENT_MOUSE_MOTION) ||
-         (event->type == SDL_EVENT_MOUSE_RAW_MOTION) ||
          (event->type == SDL_EVENT_FINGER_MOTION) ||
          (event->type == SDL_EVENT_PEN_AXIS) ||
          (event->type == SDL_EVENT_PEN_MOTION) ||
@@ -572,7 +571,7 @@ static void SDL_LogEvent(const SDL_Event *event)
     (void)SDL_snprintf(details, sizeof(details), " (timestamp=%u windowid=%u which=%u button=%u state=%s clicks=%u x=%g y=%g)", \
                        (uint)event->button.timestamp, (uint)event->button.windowID,                                             \
                        (uint)event->button.which, (uint)event->button.button,                                                   \
-                       event->button.down ? "pressed" : "released",                                             \
+                       event->button.down ? "pressed" : "released",                                                             \
                        (uint)event->button.clicks, event->button.x, event->button.y)
         SDL_EVENT_CASE(SDL_EVENT_MOUSE_BUTTON_DOWN)
         PRINT_MBUTTON_EVENT(event);
@@ -886,11 +885,16 @@ void SDL_StopEventLoop(void)
     }
     SDL_zero(SDL_EventOK);
 
-    SDL_UnlockMutex(SDL_EventQ.lock);
-
+    SDL_Mutex *lock = NULL;
     if (SDL_EventQ.lock) {
-        SDL_DestroyMutex(SDL_EventQ.lock);
+        lock = SDL_EventQ.lock;
         SDL_EventQ.lock = NULL;
+    }
+
+    SDL_UnlockMutex(lock);
+
+    if (lock) {
+        SDL_DestroyMutex(lock);
     }
 }
 
@@ -1885,12 +1889,6 @@ void SDL_SetEventEnabled(Uint32 type, bool enabled)
         if (type == SDL_EVENT_DROP_FILE || type == SDL_EVENT_DROP_TEXT) {
             SDL_ToggleDragAndDropSupport();
         }
-
-        if (type == SDL_EVENT_MOUSE_RAW_MOTION || 
-            type == SDL_EVENT_MOUSE_RAW_SCROLL || 
-            type == SDL_EVENT_MOUSE_RAW_BUTTON) {
-            SDL_UpdateRawMouseDataEnabled();
-        }
     }
 }
 
@@ -1979,9 +1977,6 @@ bool SDL_InitEvents(void)
         return false;
     }
 
-    SDL_SetEventEnabled(SDL_EVENT_MOUSE_RAW_MOTION, false);
-    SDL_SetEventEnabled(SDL_EVENT_MOUSE_RAW_SCROLL, false);
-    SDL_SetEventEnabled(SDL_EVENT_MOUSE_RAW_BUTTON, false);
     SDL_InitQuit();
 
     return true;

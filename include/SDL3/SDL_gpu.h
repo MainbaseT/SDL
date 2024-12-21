@@ -1653,6 +1653,12 @@ typedef struct SDL_GPUGraphicsPipelineTargetInfo
  * \since This struct is available since SDL 3.1.3
  *
  * \sa SDL_CreateGPUGraphicsPipeline
+ * \sa SDL_GPUVertexInputState
+ * \sa SDL_GPUPrimitiveType
+ * \sa SDL_GPURasterizerState
+ * \sa SDL_GPUMultisampleState
+ * \sa SDL_GPUDepthStencilState
+ * \sa SDL_GPUGraphicsPipelineTargetInfo
  */
 typedef struct SDL_GPUGraphicsPipelineCreateInfo
 {
@@ -2196,6 +2202,15 @@ extern SDL_DECLSPEC SDL_GPUSampler *SDLCALL SDL_CreateGPUSampler(
  *   Rather than manually authoring vertex buffer indices, use the
  *   [[stage_in]] attribute which will automatically use the vertex input
  *   information from the SDL_GPUGraphicsPipeline.
+ *
+ * Shader semantics other than system-value semantics do not matter in D3D12
+ * and for ease of use the SDL implementation assumes that non system-value
+ * semantics will all be TEXCOORD. If you are using HLSL as the shader source
+ * language, your vertex semantics should start at TEXCOORD0 and increment
+ * like so: TEXCOORD1, TEXCOORD2, etc. If you wish to change the semantic
+ * prefix to something other than TEXCOORD you can use
+ * SDL_PROP_GPU_DEVICE_CREATE_D3D12_SEMANTIC_NAME_STRING with
+ * SDL_CreateGPUDeviceWithProperties().
  *
  * \param device a GPU Context.
  * \param createinfo a struct describing the state of the shader to create.
